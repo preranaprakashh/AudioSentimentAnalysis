@@ -1,0 +1,65 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Live Audio Sentiment Analysis</title>
+  <script src="https://cdn.jsdelivr.net/npm/mic-recorder-to-mp3@2.2.2/dist/index.min.js"></script>
+</head>
+
+<body>
+  <h1>Live Audio Sentiment Analysis</h1>
+  <form action="{{ url_for('predict') }}" method="POST" enctype="multipart/form-data">
+    <input type="file" name="file">
+    <div>
+      <button type="button" id="record">Record</button>
+      <button type="button" id="stop">Stop</button>
+      <audio id="recording" controls></audio>
+      <input type="hidden" id="audioData" name="audioData">
+    </div>
+    <input type="submit" value="Predict">
+  </form>
+  <div id="result"></div>
+  <script>
+    // Initialize recorder
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const recorder = new MicRecorder({
+      bitRate: 128
+    });
+    const recordButton = document.querySelector('#record');
+    const stopButton = document.querySelector('#stop');
+
+    // Start recording when record button is clicked
+    recordButton.addEventListener('click', () => {
+      recorder.start().catch((error) => console.error(error));
+          // Stop recording after 3 seconds
+          setTimeout(() => {
+        stopButton.click();
+      }, 3000);
+    });
+
+    // Stop recording when stop button is clicked
+    stopButton.addEventListener('click', () => {
+      recorder.stop().getMp3().then(([buffer, blob]) => {
+        const formData = new FormData();
+        formData.append('audioData', blob, 'audio.mp3');
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/predict', true);
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            const response = JSON.parse(xhr.responseText);
+            const label = response['sentiment'];
+            document.querySelector('#result').textContent = 'Predicted sentiment: ' + label;
+          } else {
+            alert('Error');
+          }
+        };
+        xhr.send(formData);
+      }).catch((error) => console.log(error));
+    });
+
+
+  </script>
+</body>
+
+</html>
